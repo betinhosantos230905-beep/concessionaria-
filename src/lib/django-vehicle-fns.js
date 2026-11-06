@@ -132,3 +132,31 @@ export const adminDashboard = createServerFn({ method: "GET" })
       },
     });
   });
+
+
+// Enviar imagens para o Cloudinary através do Django
+export const adminUploadImage = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      filename: z.string().min(1).max(120),
+      contentType: z.enum([
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+      ]),
+      dataBase64: z.string().min(100).max(21_000_000),
+      folder: z.enum(["vehicles", "store"]),
+    }),
+  )
+  .handler(async ({ data }) => {
+    return djangoVehicleRequest({
+      data: {
+        action: "uploadImage",
+        filename: data.filename,
+        contentType: data.contentType,
+        dataBase64: data.dataBase64,
+        folder: data.folder,
+      },
+    });
+  });
+

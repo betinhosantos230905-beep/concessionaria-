@@ -1,0 +1,50 @@
+﻿      <div className="rounded-2xl border border-white/[0.08] bg-card p-5">
+        <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-foreground">
+          Dados da loja
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {FIELDS.map((field) => (
+            <label key={field.key} className={field.full ? "block sm:col-span-2" : "block"}>
+              <Label>
+                {field.label}
+                {field.required ? " *" : ""}
+              </Label>
+              <input
+                value={form[field.key] || ""}
+                onChange={set(field.key)}
+                placeholder={field.placeholder}
+                maxLength={field.maxLength}
+                required={field.required}
+                className="field"
+              />
+            </label>
+          ))}
+          <label className="block sm:col-span-2">
+            <Label>HorÃ¡rios de atendimento</Label>
+            <textarea
+              value={form.opening_hours || ""}
+              onChange={set("opening_hours")}
+              rows={2}
+              placeholder="Seg a sex: 8h Ã s 18h&#10;SÃ¡bado: 8h Ã s 13h"
+              className="field resize-y"
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <Label>Texto institucional</Label>
+            <textarea
+              value={form.about_text || ""}
+              onChange={set("about_text")}
+              rows={4}
+              className="field resize-y"
+            />
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" disabled={saving} className="primary-btn w-full sm:w-auto disabled:opacity-60">
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+        {saving ? "Salvando..." : "Salvar configuraÃ§Ãµes"}
+      </button>
+    </form>
+  );
+}

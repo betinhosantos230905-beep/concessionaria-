@@ -159,7 +159,7 @@ export async function djangoPublicRequest(action, params = {}) {
   return result.data;
 }
 
-// Requisições administrativas de veículos e dashboard
+// Requisições administrativas de veículos, dashboard e upload
 export async function djangoVehicleRequest({ data }) {
   const id = data.id;
 
@@ -176,6 +176,18 @@ export async function djangoVehicleRequest({ data }) {
     case "dashboard": {
       path = "/api/admin/dashboard/";
       method = "GET";
+      break;
+    }
+
+    case "uploadImage": {
+      path = "/api/admin/upload-image/";
+      method = "POST";
+      body = JSON.stringify({
+        filename: data.filename,
+        contentType: data.contentType,
+        dataBase64: data.dataBase64,
+        folder: data.folder,
+      });
       break;
     }
 

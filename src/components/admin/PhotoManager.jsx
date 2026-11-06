@@ -1,7 +1,7 @@
+
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Star, Trash2 } from "lucide-react";
-import { adminUploadImage } from "@/lib/admin-fns";
-import { getToken } from "@/lib/adminSession";
+import { adminUploadImage } from "@/lib/django-vehicle-fns";
 import { Image } from "@/components/ui/image";
 
 const MAX_PHOTOS = 12;
@@ -45,6 +45,7 @@ export default function PhotoManager({ images = [], onChange }) {
     setError("");
     const list = Array.from(files || []);
     if (!list.length) return;
+
     if (images.length + list.length > MAX_PHOTOS) {
       setError(`Máximo de ${MAX_PHOTOS} fotos por veículo.`);
       return;
@@ -52,29 +53,40 @@ export default function PhotoManager({ images = [], onChange }) {
 
     setUploading(true);
     const uploaded = [];
+
     try {
       for (const file of list) {
         if (!ALLOWED.includes(file.type)) {
           setError("Use imagens JPG, PNG ou WebP.");
           continue;
         }
+
         if (file.size > MAX_BYTES) {
           setError("Cada foto deve ter no máximo 15 MB.");
           continue;
         }
+
         const dataBase64 = await compress(file);
+
         const result = await adminUploadImage({
           data: {
-            token: getToken(),
             filename: `${Date.now()}-${file.name.replace(/[^\w.-]+/g, "-")}.jpg`,
             contentType: "image/jpeg",
             dataBase64,
+            folder: "vehicles",
           },
         });
-        if (result?.ok) uploaded.push(result.url);
-        else setError("Não foi possível enviar uma das fotos.");
+
+        if (result?.ok) {
+          uploaded.push(result.url);
+        } else {
+          setError("Não foi possível enviar uma das fotos.");
+        }
       }
-      if (uploaded.length) onChange([...images, ...uploaded]);
+
+      if (uploaded.length) {
+        onChange([...images, ...uploaded]);
+      }
     } catch {
       setError("Falha no envio das fotos. Tente novamente.");
     } finally {
@@ -89,15 +101,21 @@ export default function PhotoManager({ images = [], onChange }) {
         <p className="text-[13px] text-muted-foreground">
           A primeira foto é a principal do anúncio. Máximo de {MAX_PHOTOS} imagens.
         </p>
+
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
           className="ghost-btn disabled:opacity-60"
         >
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ImagePlus className="h-4 w-4" />
+          )}
           {uploading ? "Enviando..." : "Adicionar fotos"}
         </button>
+
         <input
           ref={inputRef}
           type="file"
@@ -108,7 +126,9 @@ export default function PhotoManager({ images = [], onChange }) {
         />
       </div>
 
-      {error ? <p className="mt-2 text-[12px] text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="mt-2 text-[12px] text-destructive">{error}</p>
+      ) : null}
 
       {images.length ? (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -117,12 +137,18 @@ export default function PhotoManager({ images = [], onChange }) {
               key={`${src}-${index}`}
               className="group relative overflow-hidden rounded-xl border border-white/10 bg-secondary"
             >
-              <Image src={src} alt={`Foto ${index + 1}`} className="aspect-[4/3] w-full object-cover" />
+              <Image
+                src={src}
+                alt={`Foto ${index + 1}`}
+                className="aspect-[4/3] w-full object-cover"
+              />
+
               {index === 0 ? (
                 <span className="absolute left-2 top-2 rounded bg-primary px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-white">
                   principal
                 </span>
               ) : null}
+
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-black/65 p-1.5 backdrop-blur">
                 <div className="flex gap-1">
                   <button
@@ -134,6 +160,7 @@ export default function PhotoManager({ images = [], onChange }) {
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
+
                   <button
                     type="button"
                     onClick={() => move(index, 1)}
@@ -144,6 +171,7 @@ export default function PhotoManager({ images = [], onChange }) {
                     <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
+
                 <div className="flex gap-1">
                   <button
                     type="button"
@@ -153,6 +181,7 @@ export default function PhotoManager({ images = [], onChange }) {
                   >
                     <Star className="h-3.5 w-3.5" />
                   </button>
+
                   <button
                     type="button"
                     onClick={() => remove(index)}

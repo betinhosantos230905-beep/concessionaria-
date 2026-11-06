@@ -1,10 +1,16 @@
+
 import { useRef, useState } from "react";
 import { Loader2, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Image } from "@/components/ui/image";
-import { adminSaveSettings, adminUploadImage } from "@/lib/admin-fns";
+import { adminSaveSettings } from "@/lib/admin-fns";
+import { adminUploadImage } from "@/lib/django-vehicle-fns";
 import { getToken } from "@/lib/adminSession";
-import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, fileToJpegBase64 } from "@/lib/imageUpload";
+import {
+  ALLOWED_IMAGE_TYPES,
+  MAX_IMAGE_BYTES,
+  fileToJpegBase64,
+} from "@/lib/imageUpload";
 import { STORE_DEFAULTS } from "@/lib/storeDefaults";
 
 const FIELDS = [
@@ -34,27 +40,47 @@ function Label({ children }) {
 }
 
 export default function SettingsForm({ initial }) {
-  const [form, setForm] = useState(() => ({ ...STORE_DEFAULTS, ...(initial || {}) }));
+  const [form, setForm] = useState(() => ({
+    ...STORE_DEFAULTS,
+    ...(initial || {}),
+  }));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState("");
   const inputRefs = useRef({});
 
-  const set = (key) => (event) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
+  const set = (key) => (event) =>
+    setForm((prev) => ({ ...prev, [key]: event.target.value }));
 
   const upload = async (key, file) => {
     if (!file) return;
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type) || file.size > MAX_IMAGE_BYTES) {
+
+    if (
+      !ALLOWED_IMAGE_TYPES.includes(file.type) ||
+      file.size > MAX_IMAGE_BYTES
+    ) {
       toast.error("Use JPG, PNG ou WebP de até 15 MB.");
       return;
     }
+
     setUploading(key);
+
     try {
       const dataBase64 = await fileToJpegBase64(file);
+
       const result = await adminUploadImage({
-        data: { token: getToken(), filename: `${key}.jpg`, contentType: "image/jpeg", dataBase64 },
+        data: {
+          filename: `${key}.jpg`,
+          contentType: "image/jpeg",
+          dataBase64,
+          folder: "store",
+        },
       });
-      if (result?.ok) setForm((prev) => ({ ...prev, [key]: result.url }));
-      else toast.error("Falha no envio da imagem.");
+
+      if (result?.ok) {
+        setForm((prev) => ({ ...prev, [key]: result.url }));
+      } else {
+        toast.error("Falha no envio da imagem.");
+      }
     } catch {
       toast.error("Falha no envio da imagem.");
     } finally {
@@ -65,8 +91,15 @@ export default function SettingsForm({ initial }) {
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
+
     try {
-      const result = await adminSaveSettings({ data: { token: getToken(), data: form } });
+      const result = await adminSaveSettings({
+        data: {
+          token: getToken(),
+          data: form,
+        },
+      });
+
       if (result?.ok) {
         toast.success("Configurações salvas.");
         setForm((prev) => ({ ...prev, ...result.settings }));
@@ -84,13 +117,20 @@ export default function SettingsForm({ initial }) {
         <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-foreground">
           Identidade e imagens
         </h2>
+
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {IMAGE_FIELDS.map(({ key, label }) => (
             <div key={key}>
               <Label>{label}</Label>
+
               <div className="overflow-hidden rounded-xl border border-white/10 bg-secondary">
-                <Image src={form[key] || STORE_DEFAULTS[key]} alt={label} className="aspect-[4/3] w-full object-cover" />
+                <Image
+                  src={form[key] || STORE_DEFAULTS[key]}
+                  alt={label}
+                  className="aspect-[4/3] w-full object-cover"
+                />
               </div>
+
               <input
                 ref={(el) => {
                   inputRefs.current[key] = el;
@@ -100,6 +140,7 @@ export default function SettingsForm({ initial }) {
                 onChange={(e) => upload(key, e.target.files?.[0])}
                 className="hidden"
               />
+
               <button
                 type="button"
                 onClick={() => inputRefs.current[key]?.click()}
@@ -122,13 +163,18 @@ export default function SettingsForm({ initial }) {
         <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-foreground">
           Dados da loja
         </h2>
+
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {FIELDS.map((field) => (
-            <label key={field.key} className={field.full ? "block sm:col-span-2" : "block"}>
+            <label
+              key={field.key}
+              className={field.full ? "block sm:col-span-2" : "block"}
+            >
               <Label>
                 {field.label}
                 {field.required ? " *" : ""}
               </Label>
+
               <input
                 value={form[field.key] || ""}
                 onChange={set(field.key)}
@@ -139,18 +185,22 @@ export default function SettingsForm({ initial }) {
               />
             </label>
           ))}
+
           <label className="block sm:col-span-2">
             <Label>Horários de atendimento</Label>
+
             <textarea
               value={form.opening_hours || ""}
               onChange={set("opening_hours")}
               rows={2}
-              placeholder="Seg a sex: 8h às 18h&#10;Sábado: 8h às 13h"
+              placeholder={"Seg a sex: 8h às 18h\nSábado: 8h às 13h"}
               className="field resize-y"
             />
           </label>
+
           <label className="block sm:col-span-2">
             <Label>Texto institucional</Label>
+
             <textarea
               value={form.about_text || ""}
               onChange={set("about_text")}
@@ -161,8 +211,16 @@ export default function SettingsForm({ initial }) {
         </div>
       </div>
 
-      <button type="submit" disabled={saving} className="primary-btn w-full sm:w-auto disabled:opacity-60">
-        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+      <button
+        type="submit"
+        disabled={saving}
+        className="primary-btn w-full sm:w-auto disabled:opacity-60"
+      >
+        {saving ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Save className="h-4 w-4" />
+        )}
         {saving ? "Salvando..." : "Salvar configurações"}
       </button>
     </form>

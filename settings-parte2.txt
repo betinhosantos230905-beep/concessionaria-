@@ -1,0 +1,60 @@
+﻿      setUploading("");
+    }
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const result = await adminSaveSettings({ data: { token: getToken(), data: form } });
+      if (result?.ok) {
+        toast.success("ConfiguraÃ§Ãµes salvas.");
+        setForm((prev) => ({ ...prev, ...result.settings }));
+      } else {
+        toast.error("NÃ£o foi possÃ­vel salvar.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div className="rounded-2xl border border-white/[0.08] bg-card p-5">
+        <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-foreground">
+          Identidade e imagens
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {IMAGE_FIELDS.map(({ key, label }) => (
+            <div key={key}>
+              <Label>{label}</Label>
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-secondary">
+                <Image src={form[key] || STORE_DEFAULTS[key]} alt={label} className="aspect-[4/3] w-full object-cover" />
+              </div>
+              <input
+                ref={(el) => {
+                  inputRefs.current[key] = el;
+                }}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => upload(key, e.target.files?.[0])}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => inputRefs.current[key]?.click()}
+                disabled={uploading === key}
+                className="ghost-btn mt-2 w-full py-2 text-xs"
+              >
+                {uploading === key ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Upload className="h-3.5 w-3.5" />
+                )}
+                Trocar imagem
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+

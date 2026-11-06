@@ -1,0 +1,60 @@
+﻿import { useRef, useState } from "react";
+import { Loader2, Save, Upload } from "lucide-react";
+import { toast } from "sonner";
+import { Image } from "@/components/ui/image";
+import { adminSaveSettings, adminUploadImage } from "@/lib/admin-fns";
+import { getToken } from "@/lib/adminSession";
+import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, fileToJpegBase64 } from "@/lib/imageUpload";
+import { STORE_DEFAULTS } from "@/lib/storeDefaults";
+
+const FIELDS = [
+  { key: "name", label: "Nome da loja", required: true },
+  { key: "tagline", label: "Slogan curto" },
+  { key: "whatsapp", label: "WhatsApp (sÃ³ nÃºmeros, com DDD)", placeholder: "24999999999" },
+  { key: "phone", label: "Telefone", placeholder: "2424710000" },
+  { key: "address", label: "EndereÃ§o", full: true },
+  { key: "city", label: "Cidade" },
+  { key: "state", label: "Estado (UF)", maxLength: 2 },
+  { key: "instagram", label: "Instagram (@usuario)" },
+  { key: "facebook", label: "Facebook (link)" },
+];
+
+const IMAGE_FIELDS = [
+  { key: "logo_url", label: "Logotipo" },
+  { key: "hero_image", label: "Imagem da capa (home)" },
+  { key: "store_image", label: "Imagem da seÃ§Ã£o â€œA lojaâ€" },
+];
+
+function Label({ children }) {
+  return (
+    <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+      {children}
+    </span>
+  );
+}
+
+export default function SettingsForm({ initial }) {
+  const [form, setForm] = useState(() => ({ ...STORE_DEFAULTS, ...(initial || {}) }));
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState("");
+  const inputRefs = useRef({});
+
+  const set = (key) => (event) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
+
+  const upload = async (key, file) => {
+    if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type) || file.size > MAX_IMAGE_BYTES) {
+      toast.error("Use JPG, PNG ou WebP de atÃ© 15 MB.");
+      return;
+    }
+    setUploading(key);
+    try {
+      const dataBase64 = await fileToJpegBase64(file);
+      const result = await adminUploadImage({
+        data: { token: getToken(), filename: `${key}.jpg`, contentType: "image/jpeg", dataBase64 },
+      });
+      if (result?.ok) setForm((prev) => ({ ...prev, [key]: result.url }));
+      else toast.error("Falha no envio da imagem.");
+    } catch {
+      toast.error("Falha no envio da imagem.");
+    } finally {
