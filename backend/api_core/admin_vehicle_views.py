@@ -3,12 +3,12 @@ import json
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, Count
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import Vehicle, VehicleImage, VehicleFeature
+from .models import Vehicle, VehicleImage, VehicleFeature, Lead
 from .admin_auth_views import (
     _admin_request_allowed,
     _authenticated_credential,
@@ -503,3 +503,68 @@ def admin_vehicle_detail(request, vehicle_id):
         return admin_delete_vehicle(request, vehicle_id)
 
     return _error("Método não permitido.", 405)
+
+def admin_dashboard(request):
+    if request.method != "GET":
+        return JsonResponse(
+            {"ok": False, "error": "method_not_allowed"},
+            status=405,
+        )
+
+    if not _admin_request_allowed(request) or not _authenticated_credential(request):
+        return JsonResponse(
+            {"ok": False, "error": "unauthorized"},
+            status=401,
+        )
+
+    counts = {
+        "total": Vehicle.objects.count(),
+        "available": Vehicle.objects.filter(status="available").count(),
+        "sold": Vehicle.objects.filter(status="sold").count(),
+        "paused": Vehicle.objects.filter(status="paused").count(),
+        "featured": Vehicle.objects.filter(featured=True).count(),
+        "leadsTotal": Lead.objects.count(),
+        "leadsNew": Lead.objects.filter(status="new").count(),
+    }
+
+    brands = list(
+        Vehicle.objects.values("brand")
+        .annotate(count=Count("id"))
+        .order_by("-count")[:6]
+    )
+
+    brands = [
+        {
+            "brand": item["brand"] or "—",
+            "count": item["count"],
+        }
+        for item in brands
+    ]
+
+    leads = list(
+        Lead.objects.values("status")
+        .annotate(count=Count("id"))
+        .order_by("status")
+    )
+
+    recent_leads = Lead.objects.order_by("-created_at")[:6]
+
+    recent_leads_data = [
+        {
+            "id": lead.id,
+            "name": lead.name,
+            "phone": lead.phone,
+            "vehicle_label": lead.vehicle_label,
+            "status": lead.status,
+            "created_date": lead.created_at.isoformat() if lead.created_at else None,
+        }
+        for lead in recent_leads
+    ]
+
+    return JsonResponse({
+        "ok": True,
+        "counts": counts,
+        "brands": brands,
+        "leads": leads,
+        "recentLeads": recent_leads_data,
+    })

@@ -121,3 +121,14 @@ export const adminDeleteVehicle = createServerFn({ method: "POST" })
       },
     });
   });
+
+// Carregar dados da Visão geral administrativa
+export const adminDashboard = createServerFn({ method: "GET" })
+  .validator(z.object({}))
+  .handler(async () => {
+    return djangoVehicleRequest({
+      data: {
+        action: "dashboard",
+      },
+    });
+  });

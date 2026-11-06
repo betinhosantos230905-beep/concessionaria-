@@ -1,5 +1,4 @@
 
-
 import {
   getRequest,
   getCookie,
@@ -13,7 +12,7 @@ async function djangoRequest(path, options = {}) {
   const workerSecret = process.env.WORKER_SHARED_SECRET;
 
   if (!baseUrl || !workerSecret) {
-    throw new Error("ConfiguraÃ§Ã£o da comunicaÃ§Ã£o com Django ausente.");
+    throw new Error("Configuração da comunicação com Django ausente.");
   }
 
   const request = getRequest();
@@ -57,6 +56,7 @@ async function djangoRequest(path, options = {}) {
   };
 }
 
+// Autenticação administrativa
 export async function djangoAdminRequest({ data }) {
   const allowedPaths = {
     status: "/api/admin/status/",
@@ -88,6 +88,8 @@ export async function djangoAdminRequest({ data }) {
 
   return result.data;
 }
+
+// Requisições públicas
 export async function djangoPublicRequest(action, params = {}) {
   const allowedPaths = {
     home: "/api/home/",
@@ -157,9 +159,7 @@ export async function djangoPublicRequest(action, params = {}) {
   return result.data;
 }
 
-
-
-
+// Requisições administrativas de veículos e dashboard
 export async function djangoVehicleRequest({ data }) {
   const id = data.id;
 
@@ -173,6 +173,12 @@ export async function djangoVehicleRequest({ data }) {
   let body;
 
   switch (data.action) {
+    case "dashboard": {
+      path = "/api/admin/dashboard/";
+      method = "GET";
+      break;
+    }
+
     case "save": {
       const isUpdate = validId;
 

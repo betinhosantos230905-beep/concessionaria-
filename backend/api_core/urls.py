@@ -23,6 +23,7 @@ from .admin_vehicle_views import (
     admin_list_vehicles,
     admin_vehicle_detail,
     admin_quick_update_vehicle,
+    admin_dashboard,
 )
 
 
@@ -32,6 +33,7 @@ urlpatterns = [
     path("store/", get_store, name="get-store"),
     path("home/", get_home_data, name="get-home-data"),
     path("vehicles/", get_vehicles, name="get-vehicles"),
+
     path("vehicles/facets/", get_catalog_facets, name="get-catalog-facets"),
     path("vehicles/<int:vehicle_id>/", get_vehicle_detail, name="get-vehicle-detail"),
     path("leads/", create_lead, name="create-lead"),
@@ -45,7 +47,7 @@ urlpatterns = [
     # Administração de veículos
     path("admin/vehicles/", admin_save_vehicle, name="admin-save-vehicle"),
     path("admin/vehicles/list/", admin_list_vehicles, name="admin-list-vehicles"),
-
+    path("admin/dashboard/", admin_dashboard, name="admin-dashboard"),
     # Edição, consulta e exclusão
     path(
         "admin/vehicles/<int:vehicle_id>/",

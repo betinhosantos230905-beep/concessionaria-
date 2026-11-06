@@ -2,7 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { Car, CheckCircle2, Star, PauseCircle, Inbox, Plus, Loader2, BadgeDollarSign } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, PieChart, Pie } from "recharts";
 import StatCard from "@/components/admin/StatCard";
-import { adminDashboard } from "@/lib/admin-fns";
+import { adminDashboard } from "@/lib/django-vehicle-fns";
 import { useAdminData } from "@/lib/useAdminData";
 import { brl, formatDate } from "@/lib/format";
 
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/admin/")({
 });
 
 function AdminDashboard() {
-  const { data, loading } = useAdminData((token) => adminDashboard({ data: { token } }));
+  const { data, loading } = useAdminData(() => adminDashboard({ data: {} }));
 
   if (loading && !data) {
     return (
