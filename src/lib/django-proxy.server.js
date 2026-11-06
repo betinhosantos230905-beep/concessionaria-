@@ -156,3 +156,30 @@ export async function djangoPublicRequest(action, params = {}) {
 
   return result.data;
 }
+
+
+
+export async function djangoVehicleRequest({ data }) {
+  if (data.action !== "save") {
+    return {
+      ok: false,
+      error: "invalid_action",
+    };
+  }
+
+  const isUpdate = data.id !== undefined && data.id !== null;
+
+  const path = isUpdate
+    ? `/api/admin/vehicles/${encodeURIComponent(String(data.id))}/`
+    : "/api/admin/vehicles/";
+
+  const result = await djangoRequest(path, {
+    method: isUpdate ? "PATCH" : "POST",
+    body: JSON.stringify(data.payload || {}),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  return result.data;
+}

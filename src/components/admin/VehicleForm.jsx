@@ -4,8 +4,8 @@ import { Loader2, Save, ArrowLeft, Star } from "lucide-react";
 import { toast } from "sonner";
 import ChipInput from "@/components/admin/ChipInput";
 import PhotoManager from "@/components/admin/PhotoManager";
-import { adminSaveVehicle } from "@/lib/admin-fns";
-import { getToken } from "@/lib/adminSession";
+import { adminSaveVehicle } from "@/lib/django-vehicle-fns";
+
 import { BRANDS, BODY_TYPES, CATEGORIES, FUEL_TYPES, TRANSMISSIONS, VEHICLE_STATUS } from "@/lib/storeDefaults";
 
 const EMPTY = {
@@ -99,8 +99,8 @@ export default function VehicleForm({ vehicle }) {
     setSaving(true);
     try {
       const result = await adminSaveVehicle({
-        data: { token: getToken(), id: vehicle?.id, data: payload },
-      });
+  data: { id: vehicle?.id, data: payload },
+});
       if (result?.ok) {
         toast.success(vehicle ? "Anúncio atualizado." : "Veículo cadastrado.");
         navigate({ to: "/admin/veiculos" });
