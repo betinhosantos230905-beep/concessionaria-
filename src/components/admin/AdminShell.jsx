@@ -80,6 +80,7 @@ export default function AdminShell({ children }) {
           <span className="font-mono text-xs uppercase tracking-[0.2em]">
             verificando acesso
           </span>
+          
         </div>
       </div>
     );
