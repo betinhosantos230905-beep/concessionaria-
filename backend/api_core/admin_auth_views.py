@@ -62,7 +62,7 @@ def _origin_allowed(request):
 
 
 def _admin_request_allowed(request):
-    return _worker_authorized(request) and _origin_allowed(request)
+    return _worker_authorized(request)
 
 def _set_session_cookie(response, token):
     response.set_cookie(
