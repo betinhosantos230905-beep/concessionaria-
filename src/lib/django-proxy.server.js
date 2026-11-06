@@ -1,4 +1,4 @@
-﻿import { createServerFn } from "@tanstack/react-start";
+
 
 import {
   getRequest,
@@ -57,42 +57,37 @@ async function djangoRequest(path, options = {}) {
   };
 }
 
-export const djangoAdminRequest = createServerFn({
-  method: "POST",
-})
-  .validator((data) => data)
-  .handler(async ({ data }) => {
-    const allowedPaths = {
-      status: "/api/admin/status/",
-      setup: "/api/admin/setup/",
-      login: "/api/admin/login/",
-      logout: "/api/admin/logout/",
+export async function djangoAdminRequest({ data }) {
+  const allowedPaths = {
+    status: "/api/admin/status/",
+    setup: "/api/admin/setup/",
+    login: "/api/admin/login/",
+    logout: "/api/admin/logout/",
+  };
+
+  const path = allowedPaths[data.action];
+
+  if (!path) {
+    return {
+      ok: false,
+      error: "invalid_action",
     };
+  }
 
-    const path = allowedPaths[data.action];
+  const method = data.action === "status" ? "GET" : "POST";
 
-    if (!path) {
-      return {
-        ok: false,
-        error: "invalid_action",
-      };
-    }
-
-    const method = data.action === "status" ? "GET" : "POST";
-
-    const result = await djangoRequest(path, {
-      method,
-      body: method === "POST"
-        ? JSON.stringify(data.payload || {})
-        : undefined,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    return result.data;
+  const result = await djangoRequest(path, {
+    method,
+    body: method === "POST"
+      ? JSON.stringify(data.payload || {})
+      : undefined,
+    headers: {
+      "Content-Type": "application/json",
+    },
   });
 
+  return result.data;
+}
 export async function djangoPublicRequest(action, params = {}) {
   const allowedPaths = {
     home: "/api/home/",
