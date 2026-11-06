@@ -40,3 +40,13 @@ export const adminLogin = createServerFn({ method: "POST" })
       },
     });
   });
+
+
+export const adminLogout = createServerFn({ method: "POST" })
+  .validator(z.object({}))
+  .handler(async () => {
+    return djangoAdminRequest({
+      data: { action: "logout" },
+    });
+  });
+

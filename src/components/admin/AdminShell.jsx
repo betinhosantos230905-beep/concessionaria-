@@ -1,9 +1,18 @@
+
 import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Car, Inbox, Settings, LogOut, ExternalLink, Loader2 } from "lucide-react";
+import {
+  LayoutDashboard,
+  Car,
+  Inbox,
+  Settings,
+  LogOut,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
+
 import Brand from "@/components/site/Brand";
-import { adminStatus } from "@/lib/admin-fns";
-import { clearToken, getToken } from "@/lib/adminSession";
+import { adminStatus, adminLogout } from "@/lib/django-auth-fns";
 import { STORE_DEFAULTS } from "@/lib/storeDefaults";
 import { cn } from "@/lib/utils";
 
@@ -23,41 +32,54 @@ export default function AdminShell({ children }) {
 
   useEffect(() => {
     let active = true;
-    const token = getToken();
-    if (!token) {
-      setState("denied");
-      navigateRef.current({ to: "/admin/login", replace: true });
-      return;
-    }
-    adminStatus({ data: { token } })
+
+    adminStatus({ data: {} })
       .then((result) => {
         if (!active) return;
-        if (result?.valid) setState("ok");
-        else {
-          clearToken();
+
+        if (result?.valid) {
+          setState("ok");
+        } else {
           setState("denied");
-          navigateRef.current({ to: "/admin/login", replace: true });
+          navigateRef.current({
+            to: "/admin/login",
+            replace: true,
+          });
         }
       })
       .catch(() => {
-        if (active) setState("denied");
+        if (!active) return;
+
+        setState("denied");
+        navigateRef.current({
+          to: "/admin/login",
+          replace: true,
+        });
       });
+
     return () => {
       active = false;
     };
   }, []);
 
-  const logout = () => {
-    clearToken();
+  const logout = async () => {
+  try {
+    await adminLogout({ data: {} });
+  } catch (error) {
+    console.error("Erro ao encerrar sessão administrativa:", error);
+  } finally {
     navigate({ to: "/admin/login", replace: true });
-  };
+  }
+};
 
   if (state === "checking") {
     return (
       <div className="grid min-h-screen place-items-center bg-background">
         <div className="flex items-center gap-3 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          <span className="font-mono text-xs uppercase tracking-[0.2em]">verificando acesso</span>
+          <span className="font-mono text-xs uppercase tracking-[0.2em]">
+            verificando acesso
+          </span>
         </div>
       </div>
     );
@@ -94,6 +116,7 @@ export default function AdminShell({ children }) {
           >
             <ExternalLink className="h-4 w-4" /> Ver o site
           </Link>
+
           <button
             type="button"
             onClick={logout}
@@ -110,19 +133,29 @@ export default function AdminShell({ children }) {
             <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
               painel da loja
             </p>
-            <p className="font-heading text-sm font-semibold text-foreground">Vassouras Motos</p>
+            <p className="font-heading text-sm font-semibold text-foreground">
+              Vassouras Motos
+            </p>
           </div>
+
           <div className="flex items-center gap-2">
             <Link to="/" className="ghost-btn px-3 py-2 text-xs lg:hidden">
               <ExternalLink className="h-3.5 w-3.5" /> Site
             </Link>
-            <button type="button" onClick={logout} className={cn("ghost-btn px-3 py-2 text-xs lg:hidden")}>
+
+            <button
+              type="button"
+              onClick={logout}
+              className={cn("ghost-btn px-3 py-2 text-xs lg:hidden")}
+            >
               <LogOut className="h-3.5 w-3.5" /> Sair
             </button>
           </div>
         </header>
 
-        <main className="px-4 py-6 sm:px-8 sm:py-8">{children ?? <Outlet />}</main>
+        <main className="px-4 py-6 sm:px-8 sm:py-8">
+          {children ?? <Outlet />}
+        </main>
       </div>
     </div>
   );
