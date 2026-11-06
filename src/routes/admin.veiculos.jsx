@@ -1,10 +1,24 @@
+
 import { useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { Search, Plus, Star, Trash2, Pencil, Loader2, Car } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Star,
+  Trash2,
+  Pencil,
+  Loader2,
+  Car,
+} from "lucide-react";
 import { toast } from "sonner";
+
 import { Image } from "@/components/ui/image";
-import { adminDeleteVehicle, adminListVehicles, adminQuickUpdate } from "@/lib/admin-fns";
-import { getToken } from "@/lib/adminSession";
+import {
+  adminDeleteVehicle,
+  adminListVehicles,
+  adminQuickUpdate,
+} from "@/lib/django-vehicle-fns";
+
 import { useAdminData } from "@/lib/useAdminData";
 import { brl, km } from "@/lib/format";
 import { VEHICLE_STATUS } from "@/lib/storeDefaults";
@@ -23,7 +37,12 @@ const STATUS_STYLE = {
 };
 
 export const Route = createFileRoute("/admin/veiculos")({
-  head: () => ({ meta: [{ title: "Veículos — Painel" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Veículos — Painel" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: AdminVehicles,
 });
 
@@ -33,40 +52,68 @@ function AdminVehicles() {
   const [status, setStatus] = useState("all");
   const [busyId, setBusyId] = useState("");
 
+  // Listagem diretamente pelo Django
   const { data, loading, reload } = useAdminData(
-    (token) => adminListVehicles({ data: { token, q: q || undefined, status } }),
+    () =>
+      adminListVehicles({
+        data: {
+          q: q || undefined,
+          status,
+        },
+      }),
     [q, status]
   );
 
+  // Atualização rápida
   const patch = async (id, payload) => {
     setBusyId(id);
+
     try {
-      const result = await adminQuickUpdate({ data: { token: getToken(), id, patch: payload } });
+      const result = await adminQuickUpdate({
+        data: {
+          id,
+          patch: payload,
+        },
+      });
+
       if (result?.ok) {
         toast.success("Anúncio atualizado.");
         reload();
       } else {
         toast.error("Não foi possível atualizar.");
       }
+    } catch {
+      toast.error("Erro ao atualizar anúncio.");
     } finally {
       setBusyId("");
     }
   };
 
+  // Exclusão
   const remove = async (vehicle) => {
     const confirmed = window.confirm(
       `Excluir o anúncio de ${vehicle.brand} ${vehicle.model}? Essa ação não pode ser desfeita.`
     );
+
     if (!confirmed) return;
+
     setBusyId(vehicle.id);
+
     try {
-      const result = await adminDeleteVehicle({ data: { token: getToken(), id: vehicle.id } });
+      const result = await adminDeleteVehicle({
+        data: {
+          id: vehicle.id,
+        },
+      });
+
       if (result?.ok) {
         toast.success("Anúncio excluído.");
         reload();
       } else {
         toast.error("Não foi possível excluir.");
       }
+    } catch {
+      toast.error("Erro ao excluir anúncio.");
     } finally {
       setBusyId("");
     }
@@ -78,13 +125,19 @@ function AdminVehicles() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Veículos</h1>
+          <h1 className="font-heading text-2xl font-bold text-foreground">
+            Veículos
+          </h1>
+
           <p className="mt-1 text-sm text-muted-foreground">
-            {data?.total ?? 0} anúncios {status === "all" ? "no total" : "neste filtro"}
+            {data?.total ?? 0} anúncios{" "}
+            {status === "all" ? "no total" : "neste filtro"}
           </p>
         </div>
+
         <Link to="/admin/veiculo/novo" className="primary-btn">
-          <Plus className="h-4 w-4" /> Novo veículo
+          <Plus className="h-4 w-4" />
+          Novo veículo
         </Link>
       </div>
 
@@ -97,6 +150,7 @@ function AdminVehicles() {
           className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-card px-3 py-2 sm:max-w-sm"
         >
           <Search className="h-4 w-4 text-muted-foreground" />
+
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -104,6 +158,7 @@ function AdminVehicles() {
             className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
         </form>
+
         <div className="no-scrollbar flex gap-1 overflow-x-auto">
           {TABS.map((tab) => (
             <button
@@ -124,7 +179,8 @@ function AdminVehicles() {
 
       {loading && !data ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" /> Carregando veículos...
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          Carregando veículos...
         </div>
       ) : items.length ? (
         <ul className="space-y-3">
@@ -135,7 +191,7 @@ function AdminVehicles() {
             >
               <Link
                 to="/admin/veiculo/$id"
-                params={{ id: vehicle.id }}
+                params={{ id: String(vehicle.id) }}
                 className="flex min-w-0 flex-1 items-center gap-3"
               >
                 <div className="h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-secondary">
@@ -151,14 +207,20 @@ function AdminVehicles() {
                     </div>
                   )}
                 </div>
+
                 <div className="min-w-0">
                   <p className="truncate font-heading text-[15px] font-semibold text-foreground">
                     {vehicle.brand} {vehicle.model}
                   </p>
+
                   <p className="truncate text-[12px] text-muted-foreground">
-                    {vehicle.version} · {vehicle.year_manufacture}/{vehicle.year_model} · {km(vehicle.mileage)}
+                    {vehicle.version} · {vehicle.year_manufacture}/
+                    {vehicle.year_model} · {km(vehicle.mileage)}
                   </p>
-                  <p className="mt-0.5 font-heading text-sm font-semibold text-primary">{brl(vehicle.price)}</p>
+
+                  <p className="mt-0.5 font-heading text-sm font-semibold text-primary">
+                    {brl(vehicle.price)}
+                  </p>
                 </div>
               </Link>
 
@@ -168,12 +230,18 @@ function AdminVehicles() {
                     STATUS_STYLE[vehicle.status] || STATUS_STYLE.available
                   }`}
                 >
-                  {VEHICLE_STATUS.find((s) => s.value === vehicle.status)?.label || vehicle.status}
+                  {VEHICLE_STATUS.find(
+                    (s) => s.value === vehicle.status
+                  )?.label || vehicle.status}
                 </span>
 
                 <button
                   type="button"
-                  onClick={() => patch(vehicle.id, { featured: !vehicle.featured })}
+                  onClick={() =>
+                    patch(vehicle.id, {
+                      featured: !vehicle.featured,
+                    })
+                  }
                   disabled={busyId === vehicle.id}
                   aria-label="Alternar destaque"
                   className={`grid h-9 w-9 place-items-center rounded-lg border transition ${
@@ -182,18 +250,30 @@ function AdminVehicles() {
                       : "border-white/10 bg-white/[0.04] text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Star className={`h-4 w-4 ${vehicle.featured ? "fill-primary" : ""}`} />
+                  <Star
+                    className={`h-4 w-4 ${
+                      vehicle.featured ? "fill-primary" : ""
+                    }`}
+                  />
                 </button>
 
                 <select
                   value={vehicle.status}
-                  onChange={(e) => patch(vehicle.id, { status: e.target.value })}
+                  onChange={(e) =>
+                    patch(vehicle.id, {
+                      status: e.target.value,
+                    })
+                  }
                   disabled={busyId === vehicle.id}
                   aria-label="Status do anúncio"
                   className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[12px] text-foreground focus:border-primary/60 focus:outline-none"
                 >
                   {VEHICLE_STATUS.map((option) => (
-                    <option key={option.value} value={option.value} className="bg-background">
+                    <option
+                      key={option.value}
+                      value={option.value}
+                      className="bg-background"
+                    >
                       {option.label}
                     </option>
                   ))}
@@ -201,7 +281,7 @@ function AdminVehicles() {
 
                 <Link
                   to="/admin/veiculo/$id"
-                  params={{ id: vehicle.id }}
+                  params={{ id: String(vehicle.id) }}
                   aria-label="Editar"
                   className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-muted-foreground transition hover:text-foreground"
                 >
@@ -224,12 +304,21 @@ function AdminVehicles() {
       ) : (
         <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-16 text-center">
           <Car className="mx-auto h-8 w-8 text-muted-foreground/50" />
-          <p className="mt-3 font-heading text-base text-foreground">Nenhum veículo encontrado</p>
+
+          <p className="mt-3 font-heading text-base text-foreground">
+            Nenhum veículo encontrado
+          </p>
+
           <p className="mt-1 text-sm text-muted-foreground">
             Cadastre o primeiro veículo para publicar o anúncio na vitrine.
           </p>
-          <Link to="/admin/veiculo/novo" className="primary-btn mt-5 inline-flex">
-            <Plus className="h-4 w-4" /> Cadastrar veículo
+
+          <Link
+            to="/admin/veiculo/novo"
+            className="primary-btn mt-5 inline-flex"
+          >
+            <Plus className="h-4 w-4" />
+            Cadastrar veículo
           </Link>
         </div>
       )}

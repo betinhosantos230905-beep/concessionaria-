@@ -3,6 +3,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { djangoVehicleRequest } from "@/lib/django-proxy.server";
 
+const vehicleId = z.union([
+  z.number().int().positive(),
+  z.string().regex(/^[1-9]\d*$/),
+]);
+
 const vehiclePayload = z.object({
   brand: z.string().trim().min(1).max(60),
   model: z.string().trim().min(1).max(80),
@@ -36,12 +41,10 @@ const vehiclePayload = z.object({
   images: z.array(z.string().max(500)).max(12).optional().default([]),
 });
 
+// Cadastrar ou editar veículo
 export const adminSaveVehicle = createServerFn({ method: "POST" })
   .validator(z.object({
-    id: z.union([
-      z.number().int().positive(),
-      z.string().regex(/^[1-9]\d*$/),
-    ]).optional(),
+    id: vehicleId.optional(),
     data: vehiclePayload,
   }))
   .handler(async ({ data }) => {
@@ -50,6 +53,71 @@ export const adminSaveVehicle = createServerFn({ method: "POST" })
         action: "save",
         id: data.id,
         payload: data.data,
+      },
+    });
+  });
+
+// Listar veículos do painel
+export const adminListVehicles = createServerFn({ method: "GET" })
+  .validator(z.object({
+    q: z.string().max(80).optional(),
+    status: z.enum(["all", "available", "paused", "sold"]).optional(),
+    limit: z.number().int().min(1).max(36).optional(),
+    offset: z.number().int().min(0).max(100000).optional(),
+  }))
+  .handler(async ({ data }) => {
+    return djangoVehicleRequest({
+      data: {
+        action: "list",
+        ...data,
+      },
+    });
+  });
+
+// Consultar veículo individual
+export const adminGetVehicle = createServerFn({ method: "GET" })
+  .validator(z.object({
+    id: vehicleId,
+  }))
+  .handler(async ({ data }) => {
+    return djangoVehicleRequest({
+      data: {
+        action: "get",
+        id: data.id,
+      },
+    });
+  });
+
+// Atualização rápida de preço, situação ou destaque
+export const adminQuickUpdate = createServerFn({ method: "POST" })
+  .validator(z.object({
+    id: vehicleId,
+    patch: z.object({
+      status: z.enum(["available", "paused", "sold"]).optional(),
+      featured: z.boolean().optional(),
+      price: z.number().min(0).max(100000000).optional(),
+    }).refine((patch) => Object.keys(patch).length > 0),
+  }))
+  .handler(async ({ data }) => {
+    return djangoVehicleRequest({
+      data: {
+        action: "quickUpdate",
+        id: data.id,
+        patch: data.patch,
+      },
+    });
+  });
+
+// Excluir veículo
+export const adminDeleteVehicle = createServerFn({ method: "POST" })
+  .validator(z.object({
+    id: vehicleId,
+  }))
+  .handler(async ({ data }) => {
+    return djangoVehicleRequest({
+      data: {
+        action: "delete",
+        id: data.id,
       },
     });
   });

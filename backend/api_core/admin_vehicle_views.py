@@ -3,6 +3,7 @@ import json
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
+from django.db.models import Q, Prefetch
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -295,3 +296,210 @@ def admin_save_vehicle(request, vehicle_id=None):
             "Não foi possível salvar o anúncio. Verifique os dados e tente novamente.",
             500,
         )
+
+
+@csrf_exempt
+def admin_list_vehicles(request):
+    if request.method != "GET":
+        return _error("Método não permitido.", 405)
+
+    if not _admin_request_allowed(request):
+        return _error("Comunicação não autorizada.", 403)
+
+    if not _authenticated_credential(request):
+        return _error("Sessão administrativa inválida.", 401)
+
+    params = request.GET
+    queryset = Vehicle.objects.all()
+
+    status = params.get("status", "all")
+    if status not in ("all", "available", "paused", "sold"):
+        return _error("Filtro de situação inválido.")
+
+    if status != "all":
+        queryset = queryset.filter(status=status)
+
+    search = params.get("q", "").strip()[:80]
+    if search:
+        queryset = queryset.filter(
+            Q(brand__icontains=search)
+            | Q(model__icontains=search)
+            | Q(version__icontains=search)
+        )
+
+    total = queryset.count()
+
+    queryset = queryset.prefetch_related(
+        Prefetch(
+            "images",
+            queryset=VehicleImage.objects.order_by(
+                "-is_main", "position", "id"
+            ),
+        ),
+        Prefetch(
+            "features",
+            queryset=VehicleFeature.objects.order_by(
+                "kind", "position", "id"
+            ),
+        ),
+    ).order_by("-created_at", "-id")
+
+    try:
+        limit = int(params.get("limit", 24))
+    except (ValueError, TypeError):
+        return _error("Limite inválido.")
+
+    if not 1 <= limit <= 36:
+        return _error("O limite deve estar entre 1 e 36.")
+
+    try:
+        offset = int(params.get("offset", 0))
+    except (ValueError, TypeError):
+        return _error("Paginação inválida.")
+
+    if offset < 0 or offset > 100000:
+        return _error("Paginação inválida.")
+
+    vehicles = list(queryset[offset:offset + limit + 1])
+    has_more = len(vehicles) > limit
+    vehicles = vehicles[:limit]
+
+    from .views import serialize_vehicle
+
+    return JsonResponse({
+        "ok": True,
+        "items": [serialize_vehicle(vehicle) for vehicle in vehicles],
+        "total": total,
+        "has_more": has_more,
+        "next_cursor": str(offset + limit) if has_more else None,
+    })
+
+@csrf_exempt
+def admin_get_vehicle(request, vehicle_id):
+    if request.method != "GET":
+        return _error("Método não permitido.", 405)
+
+    if not _admin_request_allowed(request):
+        return _error("Comunicação não autorizada.", 403)
+
+    if not _authenticated_credential(request):
+        return _error("Sessão administrativa inválida.", 401)
+
+    vehicle = (
+        Vehicle.objects
+        .prefetch_related("images", "features")
+        .filter(pk=vehicle_id)
+        .first()
+    )
+
+    if not vehicle:
+        return _error("Veículo não encontrado.", 404)
+
+    from .views import serialize_vehicle
+
+    return JsonResponse({
+        "ok": True,
+        "vehicle": serialize_vehicle(vehicle),
+    })
+
+
+@csrf_exempt
+def admin_quick_update_vehicle(request, vehicle_id):
+    if request.method != "PATCH":
+        return _error("Método não permitido.", 405)
+
+    if not _admin_request_allowed(request):
+        return _error("Comunicação não autorizada.", 403)
+
+    if not _authenticated_credential(request):
+        return _error("Sessão administrativa inválida.", 401)
+
+    data = _read_json(request)
+
+    if data is None:
+        return _error("Dados inválidos.")
+
+    allowed_fields = {"status", "featured", "price"}
+
+    if not data or not set(data.keys()).issubset(allowed_fields):
+        return _error("Campos de atualização inválidos.")
+
+    vehicle = Vehicle.objects.filter(pk=vehicle_id).first()
+
+    if not vehicle:
+        return _error("Veículo não encontrado.", 404)
+
+    try:
+        update_fields = []
+
+        if "status" in data:
+            status = _text(data, "status", 10)
+
+            if status not in ("available", "paused", "sold"):
+                raise ValueError("Situação do anúncio inválida.")
+
+            vehicle.status = status
+            update_fields.append("status")
+
+        if "featured" in data:
+            vehicle.featured = _boolean(data, "featured")
+            update_fields.append("featured")
+
+        if "price" in data:
+            vehicle.price = _decimal(data, "price")
+            update_fields.append("price")
+
+    except ValueError as error:
+        return _error(str(error))
+
+    vehicle.updated_at = timezone.now()
+    update_fields.append("updated_at")
+
+    vehicle.save(update_fields=update_fields)
+
+    from .views import serialize_vehicle
+
+    return JsonResponse({
+        "ok": True,
+        "vehicle": serialize_vehicle(vehicle),
+    })
+
+
+@csrf_exempt
+def admin_delete_vehicle(request, vehicle_id):
+    if request.method != "DELETE":
+        return _error("Método não permitido.", 405)
+
+    if not _admin_request_allowed(request):
+        return _error("Comunicação não autorizada.", 403)
+
+    if not _authenticated_credential(request):
+        return _error("Sessão administrativa inválida.", 401)
+
+    vehicle = Vehicle.objects.filter(pk=vehicle_id).first()
+
+    if not vehicle:
+        return _error("Veículo não encontrado.", 404)
+
+    try:
+        with transaction.atomic():
+            vehicle.delete()
+
+        return JsonResponse({"ok": True})
+
+    except Exception:
+        return _error("Não foi possível excluir o veículo.", 500)
+
+
+@csrf_exempt
+def admin_vehicle_detail(request, vehicle_id):
+    if request.method == "GET":
+        return admin_get_vehicle(request, vehicle_id)
+
+    if request.method == "PATCH":
+        return admin_save_vehicle(request, vehicle_id)
+
+    if request.method == "DELETE":
+        return admin_delete_vehicle(request, vehicle_id)
+
+    return _error("Método não permitido.", 405)

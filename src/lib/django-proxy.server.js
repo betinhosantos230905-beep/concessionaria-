@@ -159,27 +159,101 @@ export async function djangoPublicRequest(action, params = {}) {
 
 
 
+
 export async function djangoVehicleRequest({ data }) {
-  if (data.action !== "save") {
-    return {
-      ok: false,
-      error: "invalid_action",
-    };
+  const id = data.id;
+
+  const validId =
+    id !== undefined &&
+    id !== null &&
+    /^[1-9]\d*$/.test(String(id));
+
+  let path;
+  let method;
+  let body;
+
+  switch (data.action) {
+    case "save": {
+      const isUpdate = validId;
+
+      path = isUpdate
+        ? `/api/admin/vehicles/${encodeURIComponent(String(id))}/`
+        : "/api/admin/vehicles/";
+
+      method = isUpdate ? "PATCH" : "POST";
+      body = JSON.stringify(data.payload || {});
+      break;
+    }
+
+    case "list": {
+      path = "/api/admin/vehicles/list/";
+
+      const query = new URLSearchParams();
+
+      for (const key of ["q", "status", "limit", "offset"]) {
+        const value = data[key];
+
+        if (value !== undefined && value !== null && value !== "") {
+          query.set(key, String(value));
+        }
+      }
+
+      const queryString = query.toString();
+
+      if (queryString) {
+        path += `?${queryString}`;
+      }
+
+      method = "GET";
+      break;
+    }
+
+    case "get": {
+      if (!validId) {
+        return { ok: false, error: "invalid_id" };
+      }
+
+      path = `/api/admin/vehicles/${encodeURIComponent(String(id))}/`;
+      method = "GET";
+      break;
+    }
+
+    case "quickUpdate": {
+      if (!validId) {
+        return { ok: false, error: "invalid_id" };
+      }
+
+      path = `/api/admin/vehicles/${encodeURIComponent(String(id))}/quick/`;
+      method = "PATCH";
+      body = JSON.stringify(data.patch || {});
+      break;
+    }
+
+    case "delete": {
+      if (!validId) {
+        return { ok: false, error: "invalid_id" };
+      }
+
+      path = `/api/admin/vehicles/${encodeURIComponent(String(id))}/`;
+      method = "DELETE";
+      break;
+    }
+
+    default:
+      return { ok: false, error: "invalid_action" };
   }
 
-  const isUpdate = data.id !== undefined && data.id !== null;
-
-  const path = isUpdate
-    ? `/api/admin/vehicles/${encodeURIComponent(String(data.id))}/`
-    : "/api/admin/vehicles/";
-
   const result = await djangoRequest(path, {
-    method: isUpdate ? "PATCH" : "POST",
-    body: JSON.stringify(data.payload || {}),
-    headers: {
-      "Content-Type": "application/json",
-    },
+    method,
+    body,
+    headers: body !== undefined
+      ? { "Content-Type": "application/json" }
+      : {},
   });
+
+  if (result.status === 401) {
+    return { ok: false, error: "unauthorized" };
+  }
 
   return result.data;
 }
