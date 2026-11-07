@@ -30,6 +30,10 @@ from .admin_upload_views import (
     admin_upload_image,
 )
 
+from .admin_lead_views import (
+    admin_list_leads,
+    admin_update_lead,
+)
 
 urlpatterns = [
     # API pública
@@ -58,7 +62,13 @@ urlpatterns = [
     path("admin/vehicles/", admin_save_vehicle, name="admin-save-vehicle"),
     path("admin/vehicles/list/", admin_list_vehicles, name="admin-list-vehicles"),
     path("admin/dashboard/", admin_dashboard, name="admin-dashboard"),
-
+    # Administração de interessados
+    path("admin/leads/", admin_list_leads, name="admin-list-leads"),
+    path(
+        "admin/leads/<int:lead_id>/",
+        admin_update_lead,
+        name="admin-update-lead",
+    ),
     # Edição, consulta e exclusão
     path(
         "admin/vehicles/<int:vehicle_id>/",

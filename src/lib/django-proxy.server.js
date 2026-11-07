@@ -275,3 +275,54 @@ export async function djangoVehicleRequest({ data }) {
 
   return result.data;
 }
+
+
+// Requisições administrativas de interessados
+export async function djangoLeadRequest({ data }) {
+  let path;
+  let method;
+  let body;
+
+  switch (data.action) {
+    case "list": {
+      const query = new URLSearchParams();
+      const status = data.status || "all";
+
+      query.set("status", status);
+      path = `/api/admin/leads/?${query.toString()}`;
+      method = "GET";
+      break;
+    }
+
+    case "update": {
+      const id = String(data.id || "");
+
+      if (!/^[1-9]\d*$/.test(id)) {
+        return { ok: false, error: "invalid_id" };
+      }
+
+      path = `/api/admin/leads/${encodeURIComponent(id)}/`;
+      method = "PATCH";
+      body = JSON.stringify(data.patch || {});
+      break;
+    }
+
+    default:
+      return { ok: false, error: "invalid_action" };
+  }
+
+  const result = await djangoRequest(path, {
+    method,
+    body,
+    headers: body !== undefined
+      ? { "Content-Type": "application/json" }
+      : {},
+  });
+
+  if (result.status === 401) {
+    return { ok: false, error: "unauthorized" };
+  }
+
+  return result.data;
+}
+

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Phone, MessageCircle, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
-import { adminUpdateLead } from "@/lib/admin-fns";
-import { getToken } from "@/lib/adminSession";
+import { adminUpdateLead } from "@/lib/django-lead-fns";
 import { formatDate, formatPhone, onlyDigits } from "@/lib/format";
 import { LEAD_STATUS } from "@/lib/storeDefaults";
 
@@ -20,7 +19,7 @@ export default function LeadCard({ lead, onChanged }) {
   const update = async (patch) => {
     setSaving(true);
     try {
-      const result = await adminUpdateLead({ data: { token: getToken(), id: lead.id, patch } });
+      const result = await adminUpdateLead({ data: { id: lead.id, patch } });
       if (result?.ok) {
         toast.success("Atendimento atualizado.");
         onChanged?.();

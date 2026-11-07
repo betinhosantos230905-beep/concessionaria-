@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Inbox, Loader2 } from "lucide-react";
 import LeadCard from "@/components/admin/LeadCard";
-import { adminListLeads } from "@/lib/admin-fns";
+import { adminListLeads } from "@/lib/django-lead-fns";
 import { useAdminData } from "@/lib/useAdminData";
 import { LEAD_STATUS } from "@/lib/storeDefaults";
 
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/admin/interessados")({
 function AdminLeads() {
   const [status, setStatus] = useState("all");
   const { data, loading, reload } = useAdminData(
-    (token) => adminListLeads({ data: { token, status } }),
+    (token) => adminListLeads({ data: { status } }),
     [status]
   );
 
