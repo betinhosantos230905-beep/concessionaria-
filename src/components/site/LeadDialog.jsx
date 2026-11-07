@@ -21,7 +21,7 @@ export default function LeadDialog({ vehicle, trigger }) {
       const result = await createLead({
         data: {
           ...form,
-          vehicle_id: vehicle?.id || "",
+          vehicle_id: String(vehicle?.id || ""),
           vehicle_label: carName(vehicle) + (vehicle?.year_model ? ` ${vehicle.year_model}` : ""),
         },
       });
