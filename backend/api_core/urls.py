@@ -35,6 +35,11 @@ from .admin_lead_views import (
     admin_update_lead,
 )
 
+from .admin_settings_views import (
+    admin_save_settings,
+)
+
+
 urlpatterns = [
     # API pública
     path("health/", health_check, name="health-check"),
@@ -62,6 +67,7 @@ urlpatterns = [
     path("admin/vehicles/", admin_save_vehicle, name="admin-save-vehicle"),
     path("admin/vehicles/list/", admin_list_vehicles, name="admin-list-vehicles"),
     path("admin/dashboard/", admin_dashboard, name="admin-dashboard"),
+
     # Administração de interessados
     path("admin/leads/", admin_list_leads, name="admin-list-leads"),
     path(
@@ -69,14 +75,22 @@ urlpatterns = [
         admin_update_lead,
         name="admin-update-lead",
     ),
-    # Edição, consulta e exclusão
+
+    # Administração das configurações da loja
+    path(
+        "admin/settings/",
+        admin_save_settings,
+        name="admin-save-settings",
+    ),
+
+    # Edição, consulta e exclusão de veículos
     path(
         "admin/vehicles/<int:vehicle_id>/",
         admin_vehicle_detail,
         name="admin-vehicle-detail",
     ),
 
-    # Atualização rápida
+    # Atualização rápida de veículos
     path(
         "admin/vehicles/<int:vehicle_id>/quick/",
         admin_quick_update_vehicle,

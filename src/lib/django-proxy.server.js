@@ -326,3 +326,27 @@ export async function djangoLeadRequest({ data }) {
   return result.data;
 }
 
+
+ 
+// Requisições administrativas de configurações da loja
+export async function djangoSettingsRequest({ data }) {
+  if (data.action !== "save") {
+    return { ok: false, error: "invalid_action" };
+  }
+
+  const result = await djangoRequest("/api/admin/settings/", {
+    method: "PATCH",
+    body: JSON.stringify(data.payload || {}),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (result.status === 401) {
+    return { ok: false, error: "unauthorized" };
+  }
+
+  return result.data;
+}
+
+

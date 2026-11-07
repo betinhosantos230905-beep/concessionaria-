@@ -3,9 +3,9 @@ import { useRef, useState } from "react";
 import { Loader2, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Image } from "@/components/ui/image";
-import { adminSaveSettings } from "@/lib/admin-fns";
+import { adminSaveSettings } from "@/lib/django-settings-fns";
 import { adminUploadImage } from "@/lib/django-vehicle-fns";
-import { getToken } from "@/lib/adminSession";
+
 import {
   ALLOWED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
@@ -88,28 +88,33 @@ export default function SettingsForm({ initial }) {
     }
   };
 
-  const submit = async (event) => {
-    event.preventDefault();
-    setSaving(true);
+ 
+const submit = async (event) => {
+  event.preventDefault();
+  setSaving(true);
 
-    try {
-      const result = await adminSaveSettings({
-        data: {
-          token: getToken(),
-          data: form,
-        },
-      });
+  try {
+    const result = await adminSaveSettings({
+      data: form,
+    });
 
-      if (result?.ok) {
-        toast.success("Configurações salvas.");
-        setForm((prev) => ({ ...prev, ...result.settings }));
-      } else {
-        toast.error("Não foi possível salvar.");
-      }
-    } finally {
-      setSaving(false);
+    if (result?.ok) {
+      toast.success("Configurações salvas.");
+      setForm((prev) => ({ ...prev, ...result.settings }));
+    } else {
+      toast.error(
+        result?.error === "unauthorized"
+          ? "Sua sessão expirou. Entre novamente."
+          : "Não foi possível salvar."
+      );
     }
-  };
+  } catch (error) {
+    console.error("Erro ao salvar configurações:", error);
+    toast.error("Não foi possível salvar.");
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <form onSubmit={submit} className="space-y-4">
