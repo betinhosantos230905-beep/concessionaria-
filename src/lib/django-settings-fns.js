@@ -21,16 +21,12 @@ const settingsSchema = z.object({
 });
 
 export const adminSaveSettings = createServerFn({ method: "POST" })
-  .validator(
-    z.object({
-      data: settingsSchema,
-    }),
-  )
+  .validator(settingsSchema)
   .handler(async ({ data }) => {
     return djangoSettingsRequest({
       data: {
         action: "save",
-        payload: data.data,
+        payload: data,
       },
     });
   });
